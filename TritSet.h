@@ -91,9 +91,9 @@ namespace TernaryLogic {
 
         ~TritSet() = default;
 
-        size_t capacity() const;
-
         size_t getSize() const;
+
+        size_t capacity() const;
 
         void shrink();
 

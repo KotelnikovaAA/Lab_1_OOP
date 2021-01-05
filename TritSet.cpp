@@ -20,14 +20,6 @@ TernaryLogic::TritSet::TritSet(std::size_t N) {
     set_.resize(setElementSize, 0);
 }
 
-size_t TernaryLogic::TritSet::capacity() const {
-    return (set_.capacity() * TRITS_IN_ONE_UINT_NUMBER);
-}
-
-size_t TernaryLogic::TritSet::getSize() const {
-    return currentSize_;
-}
-
 TernaryLogic::Trit TernaryLogic::TritSet::getTrit(const unsigned int tritPosition) const {
     size_t elementSetIndex = tritPosition * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
     size_t initialElementTritBit = tritPosition * TRIT_BIT_SIZE % (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
@@ -50,6 +42,14 @@ void TernaryLogic::TritSet::setTrit(const TernaryLogic::Trit tritValue, const un
     set_[elementIndex] |= ((unsigned int) tritValue << offset);
 
     ++tritValuesCountsMap_[getTrit(tritPosition)];
+}
+
+size_t TernaryLogic::TritSet::getSize() const {
+    return currentSize_;
+}
+
+size_t TernaryLogic::TritSet::capacity() const {
+    return (set_.capacity() * TRITS_IN_ONE_UINT_NUMBER);
 }
 
 void TernaryLogic::TritSet::shrink() {
