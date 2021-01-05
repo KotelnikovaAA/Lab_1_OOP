@@ -3,48 +3,143 @@
 //
 
 #include "TritSet.h"
+#include <cmath>
+#include <iostream>
 
-TernaryLogic::TritSet::TritSet(std::size_t N) {
-    set_.resize(N * 2 / 8 / sizeof(unsigned int), 0);
+TernaryLogic::TritSet::TritSet() {
+    initialSize_ = 0;
+    currentSize_ = 0;
+    set_.resize(initialSize_, 0);
 }
 
-size_t TernaryLogic::TritSet::capacity() {
-    return (set_.capacity() * sizeof(unsigned int) * 4);
+TernaryLogic::TritSet::TritSet(std::size_t N) {
+    auto setElementSize = ceil((double) N * TRIT_BIT_SIZE / BITS_IN_ONE_BYTE_NUMBER / sizeof(unsigned int));
+    initialSize_ = N;
+    tritValuesCountsMap_[Unknown] = N;
+    currentSize_ = initialSize_;
+    set_.resize(setElementSize, 0);
+}
+
+size_t TernaryLogic::TritSet::capacity() const {
+    return (set_.capacity() * TRITS_IN_ONE_UINT_NUMBER);
 }
 
 size_t TernaryLogic::TritSet::getSize() const {
-    return 0;
+    return currentSize_;
 }
 
 TernaryLogic::Trit TernaryLogic::TritSet::getTrit(const unsigned int tritPosition) const {
-    std::size_t elementIndex = tritPosition * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
-    unsigned int detectedElement = set_[elementIndex];
+    size_t elementSetIndex = tritPosition * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
+    size_t initialElementTritBit = tritPosition * TRIT_BIT_SIZE % (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
+    unsigned int offset = (TRITS_IN_ONE_UINT_NUMBER - 1) * TRIT_BIT_SIZE - initialElementTritBit;
 
-    std::size_t tritElementIndex = tritPosition * TRIT_BIT_SIZE % (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
-    unsigned int offset = (15 - tritElementIndex) * 2;
-
-    unsigned int tritValue = (detectedElement >> offset) & (unsigned int)3;
+    unsigned int tritValue = (set_[elementSetIndex] >> offset) & (unsigned int) 3;
 
     return codeTritValueMap.at(tritValue);
 }
-               01
-11 10 11 00 10 10 11 01
-0  1  2  3  4  5  6  7
-11 11 11 11 11 00 11 11 &
-11 10 11 00 10 10 11 01
-11 10 11 00 10 00 11 01 &
-11 11 11 11 11 01 11 11
-
-11 10 11 00 10 01 11 01
 
 void TernaryLogic::TritSet::setTrit(const TernaryLogic::Trit tritValue, const unsigned int tritPosition) {
-    std::size_t elementIndex = tritPosition * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
-    unsigned int detectedElement = set_[elementIndex];
+    --tritValuesCountsMap_[getTrit(tritPosition)];
 
-    std::size_t tritElementIndex = tritPosition * TRIT_BIT_SIZE % (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
-    unsigned int offset = (15 - tritElementIndex) * 2;
+    size_t elementIndex = tritPosition * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
+    size_t initialElementTritBit = tritPosition * TRIT_BIT_SIZE % (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER);
+    unsigned int offset = (TRITS_IN_ONE_UINT_NUMBER - 1) * TRIT_BIT_SIZE - initialElementTritBit;
 
     unsigned int bitMask = ~((unsigned int) 3 << offset);
     set_[elementIndex] &= bitMask;
     set_[elementIndex] |= ((unsigned int) tritValue << offset);
+
+    ++tritValuesCountsMap_[getTrit(tritPosition)];
 }
+
+void TernaryLogic::TritSet::shrink() {
+    int lastSetTritIndex = length() - 1;
+
+    if (lastSetTritIndex >= 0) {
+        size_t increaseUnknownTritsCount = this->getSize() - (lastSetTritIndex + 1);
+        tritValuesCountsMap_[Unknown] -= increaseUnknownTritsCount;
+        auto newSetElementSize = ceil((double) lastSetTritIndex * TRIT_BIT_SIZE
+                                      / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER));
+        set_.resize(newSetElementSize);
+        currentSize_ = lastSetTritIndex + 1;
+    } else {
+        size_t initialSetElementSize = ceil((double) initialSize_ * TRIT_BIT_SIZE
+                                            / BITS_IN_ONE_BYTE_NUMBER / sizeof(unsigned int));
+        set_.resize(initialSetElementSize);
+        currentSize_ = initialSize_;
+        resetTritValuesCountsMapData();
+    }
+
+    set_.shrink_to_fit();
+}
+
+size_t TernaryLogic::TritSet::cardinality(const TernaryLogic::Trit tritValue) const {
+    switch (tritValue) {
+        case True:
+            return tritValuesCountsMap_.at(True);
+        case False:
+            return tritValuesCountsMap_.at(False);
+        default:
+            return tritValuesCountsMap_.at(Unknown);
+    }
+}
+
+std::unordered_map<TernaryLogic::Trit, size_t, std::hash<int>> TernaryLogic::TritSet::cardinality() const {
+    return tritValuesCountsMap_;
+}
+
+void TernaryLogic::TritSet::trim(const size_t lastTritIndex) {
+    if (lastTritIndex >= currentSize_) {
+        return;
+    }
+
+    size_t newCurrentSize = lastTritIndex + 1;
+    size_t newSetElementSize = ceil((double) newCurrentSize * TRIT_BIT_SIZE / (sizeof(unsigned int) * BITS_IN_ONE_BYTE_NUMBER));
+    size_t newSetTritCapacity = newSetElementSize * TRITS_IN_ONE_UINT_NUMBER;
+    for (size_t currentSetTritIndex = newCurrentSize; currentSetTritIndex < newSetTritCapacity; currentSetTritIndex++) {
+        this->operator[](currentSetTritIndex) = Unknown;
+    }
+    currentSize_ = newCurrentSize;
+    set_.resize(newSetElementSize);
+    set_.shrink_to_fit();
+}
+
+size_t TernaryLogic::TritSet::length() const {
+    int lastSetTritIndex = -1;
+    for (size_t currentSetTritIndex = 0; currentSetTritIndex < currentSize_; currentSetTritIndex++) {
+        auto currentTritValue = getTrit(currentSetTritIndex);
+        if (currentTritValue != Unknown) {
+            lastSetTritIndex = currentSetTritIndex;
+        }
+    }
+    return (lastSetTritIndex + 1);
+}
+
+
+TernaryLogic::TritSet::Reference TernaryLogic::TritSet::operator[](const unsigned int tritIndex) {
+    return Reference(*this, tritIndex);
+}
+
+TernaryLogic::TritSet::Reference &TernaryLogic::TritSet::Reference::operator=(const TernaryLogic::Trit tritValue) {
+    if (index_ < setReference_.getSize()) {
+        setReference_.setTrit(tritValue, index_);
+    } else if (tritValue != Unknown) {
+        size_t increaseUnknownTritsCount = (index_ + 1) - setReference_.getSize();
+        setReference_.tritValuesCountsMap_[Unknown] += increaseUnknownTritsCount;
+        setReference_.currentSize_ = index_ + 1;
+        auto newSetElementSize = ceil(((double) setReference_.getSize()) * TRIT_BIT_SIZE
+                                      / BITS_IN_ONE_BYTE_NUMBER / sizeof(unsigned int));
+        setReference_.set_.resize(newSetElementSize);
+        setReference_.setTrit(tritValue, index_);
+    }
+
+    return *this;
+}
+
+TernaryLogic::TritSet::Reference &
+TernaryLogic::TritSet::Reference::operator=(const TernaryLogic::TritSet::Reference &reference) {
+    auto newTritValue = reference.setReference_.getTrit(reference.index_);
+    setReference_.setTrit(newTritValue, index_);
+    return *this;
+}
+

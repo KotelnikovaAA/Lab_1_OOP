@@ -4,7 +4,7 @@
 
 #include "Trit.h"
 
-TernaryLogic::Trit operator~(TernaryLogic::Trit tritA) {
+TernaryLogic::Trit TernaryLogic::operator~(const TernaryLogic::Trit tritA) {
     switch (tritA) {
         case TernaryLogic::True:
             return TernaryLogic::False;
@@ -15,7 +15,7 @@ TernaryLogic::Trit operator~(TernaryLogic::Trit tritA) {
     }
 }
 
-TernaryLogic::Trit operator|(TernaryLogic::Trit tritA, TernaryLogic::Trit tritB) {
+TernaryLogic::Trit TernaryLogic::operator|(const TernaryLogic::Trit tritA, const TernaryLogic::Trit tritB) {
     if (tritA == TernaryLogic::True || tritB == TernaryLogic::True) {
         return TernaryLogic::True;
     } else if (tritA == TernaryLogic::Unknown || tritB == TernaryLogic::Unknown) {
@@ -25,7 +25,7 @@ TernaryLogic::Trit operator|(TernaryLogic::Trit tritA, TernaryLogic::Trit tritB)
     }
 }
 
-TernaryLogic::Trit operator&(TernaryLogic::Trit tritA, TernaryLogic::Trit tritB) {
+TernaryLogic::Trit TernaryLogic::operator&(const TernaryLogic::Trit tritA, const TernaryLogic::Trit tritB) {
     if (tritA == TernaryLogic::False || tritB == TernaryLogic::False) {
         return TernaryLogic::False;
     } else if (tritA == TernaryLogic::Unknown || tritB == TernaryLogic::Unknown) {

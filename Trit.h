@@ -8,16 +8,16 @@
 namespace TernaryLogic {
 
     enum Trit {
-        False,
-        Unknown,
-        True
+        Unknown,     // 0 = 00
+        True,        // 1 = 01
+        False        // 2 = 10
     };
 
-    Trit operator~(Trit tritA);
+    TernaryLogic::Trit operator~(TernaryLogic::Trit tritA);
 
-    Trit operator|(Trit tritA, Trit tritB);
+    TernaryLogic::Trit operator|(TernaryLogic::Trit tritA, TernaryLogic::Trit tritB);
 
-    Trit operator&(Trit tritA, Trit tritB);
+    TernaryLogic::Trit operator&(TernaryLogic::Trit tritA, TernaryLogic::Trit tritB);
 
 }
 
